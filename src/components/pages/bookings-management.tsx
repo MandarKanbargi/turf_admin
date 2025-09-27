@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, Fragment, useEffect } from "react";
@@ -31,7 +30,7 @@ interface Booking {
   bookingNotes?: string | null;
   createdAt: string;
   customer: Customer;
-  bookingType: BookingType;
+  bookingType?: BookingType; // Make this optional
 }
 
 interface TurfInfo {
@@ -392,17 +391,19 @@ const BookingsManagement = () => {
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <h3 className="text-xl text-text-100 font-generalsans font-semibold mb-1">
-                          {booking.customer.name}
+                          {booking.customer?.name || 'Unknown Customer'}
                         </h3>
                         <p className="text-body-md text-text-100">
-                          {booking.customer.phone}
+                          {booking.customer?.phone || 'No phone'}
                         </p>
                         <p className="text-body-md text-text-100">
-                          {booking.customer.email}
+                          {booking.customer?.email || 'No email'}
                         </p>
-                        <p className="text-body-md text-primary-200 font-medium mt-1">
-                          {booking.bookingType.name}
-                        </p>
+                        {booking.bookingType && (
+                          <p className="text-body-md text-primary-200 font-medium mt-1">
+                            {booking.bookingType.name}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -435,13 +436,13 @@ const BookingsManagement = () => {
                       <div>
                         <p className="text-body-sm text-text-200">Total Turf Fee</p>
                         <p className="text-h6 text-primary-200 font-generalsans font-semibold">
-                          ₹{booking.totalTurfFee.toLocaleString()}
+                          ₹{booking.totalTurfFee?.toLocaleString() || 0}
                         </p>
                       </div>
                       <div>
                         <p className="text-body-sm text-text-200">Remaining Amount</p>
                         <p className="text-h6 text-error font-generalsans font-semibold">
-                          ₹{booking.remainingAmount.toLocaleString()}
+                          ₹{booking.remainingAmount?.toLocaleString() || 0}
                         </p>
                       </div>
                     </div>
