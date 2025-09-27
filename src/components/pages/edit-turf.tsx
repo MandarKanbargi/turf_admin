@@ -352,37 +352,6 @@ const Textarea = ({
 );
 
 
-const Select = ({ 
-  className = "", 
-  error = false,
-  children,
-  ...props 
-}: React.SelectHTMLAttributes<HTMLSelectElement> & { error?: boolean }) => (
-  <select
-    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-      error 
-        ? 'border-error focus:ring-error/20' 
-        : 'border-background-300 focus:ring-primary-200/20 focus:border-primary-200'
-    } ${className}`}
-    {...props}
-  >
-    {children}
-  </select>
-);
-
-const TimeInput = ({ value, onChange, ...props }: { 
-  value: string; 
-  onChange: (value: string) => void; 
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) => (
-  <Input
-    type="time"
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    {...props}
-  />
-);
-
-
 const formatPhoneForDisplay = (phone: string): string => {
   if (!phone) return "";
   
@@ -391,16 +360,6 @@ const formatPhoneForDisplay = (phone: string): string => {
     return cleanPhone.replace(/(\d{5})(\d{5})/, '$1 $2');
   }
   return phone;
-};
-
-const formatPhoneForAPI = (phone: string): string => {
-  if (!phone) return "";
-  
-  const cleanPhone = phone.replace(/\D/g, '');
-  if (cleanPhone.length === 10) {
-    return `+91-${cleanPhone}`;
-  }
-  return phone; 
 };
 
 
@@ -438,9 +397,6 @@ export const EditTurf = () => {
   });
 
  
-  const [operatingHours, setOperatingHours] = useState<OperatingHour[]>([]);
-
-  
   useEffect(() => {
     if (turfId) {
       fetchTurf();
@@ -480,9 +436,6 @@ export const EditTurf = () => {
 
         // Set selected amenities
         setSelectedAmenities(turfData.amenities || []);
-
-        
-        setOperatingHours(turfData.operatingHours || []);
       } else {
         throw new Error(response.message || "Failed to fetch turf data");
       }
@@ -539,13 +492,6 @@ export const EditTurf = () => {
         return [...prev, amenity];
       }
     });
-  };
-
- 
-  const handleOperatingHourChange = (dayIndex: number, field: keyof OperatingHour, value: string | boolean) => {
-    setOperatingHours(prev => prev.map((hour, index) => 
-      index === dayIndex ? { ...hour, [field]: value } : hour
-    ));
   };
 
  

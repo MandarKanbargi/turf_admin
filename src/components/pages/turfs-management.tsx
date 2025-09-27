@@ -6,7 +6,7 @@ import { Icons } from "@/components/icons";
 import { Button } from "@/components/elements";
 import { Switch } from "@/components/elements";
 
-// Types for API response
+
 interface TurfMedia {
   id: string;
   url: string;
@@ -25,7 +25,7 @@ interface Turf {
   averageRating: number;
   totalReviews: number;
   createdAt: string;
-  // Optional fields for display
+  
   image?: string;
   images?: string[];
   media?: TurfMedia[];
@@ -44,9 +44,9 @@ interface MediaResponse {
   message?: string;
 }
 
-// API service with credentials: 'include' for all requests
+
 const apiService = {
-  baseURL: import.meta.env.VITE_BASE_API_URL || "play-arena-app-production.up.railway.app",
+  baseURL: import.meta.env.VITE_BASE_API_URL || "https://api.theplayarena.co.in",
 
   async getMyTurfs(): Promise<ApiResponse> {
     try {
@@ -112,7 +112,7 @@ const apiService = {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ is_active: isActive }),
+        body: JSON.stringify({ isActive: isActive }),
       });
 
       if (!response.ok) {
@@ -135,22 +135,61 @@ const apiService = {
 
 const AppHeaderWithLogout = () => {
   const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = () => {
-    // Clear all local storage and session storage
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    sessionStorage.clear();
+  const handleLogout = async () => {
+    if (isLoggingOut) return; 
+    
+    setIsLoggingOut(true);
+    
+    try {
+      
+      try {
+        await fetch(`${apiService.baseURL}/v1/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      } catch (error) {
+       
+        console.log("Logout API call failed, continuing with client-side cleanup");
+      }
 
-    // Clear all cookies
-    document.cookie.split(";").forEach((c) => {
-      document.cookie = c
-        .replace(/^ +/, "")
-        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-    });
+      
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      
+     
+      sessionStorage.clear();
 
-    // Navigate to login page
-    navigate("/auth/login", { replace: true });
+
+      const cookiesToClear = [
+        'authToken', 
+        'refreshToken', 
+        'sessionId', 
+        'connect.sid',
+        'session'
+      ];
+      
+      cookiesToClear.forEach(cookieName => {
+ 
+        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+
+        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`;
+
+        const domain = window.location.hostname.split('.').slice(-2).join('.');
+        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain};`;
+      });
+
+    } catch (error) {
+      console.error("Error during logout:", error);
+    } finally {
+      setIsLoggingOut(false);
+    
+      navigate("/auth/login", { replace: true });
+    }
   };
 
   return (
@@ -159,7 +198,7 @@ const AppHeaderWithLogout = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-              <Icons.home className="w-5 h-5 text-white" />
+              <Icons.home className="w-5 h-5 text-white fallback-icon hidden" />
             </div>
             <span className="text-2xl font-generalsans font-semibold text-text-100">
               Turf Owner
@@ -168,10 +207,15 @@ const AppHeaderWithLogout = () => {
 
           <Button
             onClick={handleLogout}
-            className="bg-primary-200 text-background-100 flex w-auto items-center justify-center gap-2 font-medium sm:w-auto"
+            disabled={isLoggingOut}
+            className="bg-primary-200 text-background-100 flex w-auto items-center justify-center gap-2 font-medium sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Icons.logOut className="size-4" />
-            Logout
+            {isLoggingOut ? (
+              <div className="w-4 h-4 border-2 border-background-100 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Icons.logOut className="size-4" />
+            )}
+            {isLoggingOut ? "Logging out..." : "Logout"}
           </Button>
         </div>
       </div>
@@ -179,12 +223,10 @@ const AppHeaderWithLogout = () => {
   );
 };
 
-// Image Carousel Component
 const ImageCarousel = ({ media, turfName }: { media: TurfMedia[]; turfName: string }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Filter only images
   const images = media.filter(item => item.type === 'image');
   
   if (images.length === 0) {
@@ -232,7 +274,7 @@ const ImageCarousel = ({ media, turfName }: { media: TurfMedia[]; turfName: stri
           </div>
         )}
 
-        {/* Navigation Arrows - only show if more than 1 image */}
+        
         {images.length > 1 && (
           <>
             <button
@@ -288,7 +330,7 @@ const ImageCarousel = ({ media, turfName }: { media: TurfMedia[]; turfName: stri
   );
 };
 
-// Loading component
+
 const TurfCardSkeleton = () => (
   <div className="bg-background-100 shadow-down overflow-hidden rounded-xl animate-pulse">
     <div className="h-40 sm:h-48 bg-gray-300"></div>
@@ -323,10 +365,10 @@ const TurfCardSkeleton = () => (
   </div>
 );
 
-// Error component
+
 const ErrorState = ({ message, onRetry }: { message: string; onRetry: () => void }) => (
   <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
-    <Icons.alertCircle className="w-12 h-12 text-error mb-4" />
+    <Icons.alertCircle className="w-12 h-12 text-error bg-error mb-4" />
     <h3 className="text-h6 font-generalsans font-semibold text-text-100 mb-2">
       Something went wrong
     </h3>
@@ -340,7 +382,7 @@ const ErrorState = ({ message, onRetry }: { message: string; onRetry: () => void
   </div>
 );
 
-// Empty state component
+
 const EmptyState = () => (
   <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
     <Icons.home className="w-12 h-12 text-text-200 mb-4" />
@@ -357,41 +399,41 @@ const EmptyState = () => (
   </div>
 );
 
-// Rating stars component
-const RatingStars = ({ rating, totalReviews }: { rating: number; totalReviews: number }) => {
-  const stars = [];
-  const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 >= 0.5;
+
+// const RatingStars = ({ rating, totalReviews }: { rating: number; totalReviews: number }) => {
+//   const stars = [];
+//   const fullStars = Math.floor(rating);
+//   const hasHalfStar = rating % 1 >= 0.5;
   
-  for (let i = 0; i < 5; i++) {
-    if (i < fullStars) {
-      stars.push(
-        <Icons.star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-      );
-    } else if (i === fullStars && hasHalfStar) {
-      stars.push(
-        <Icons.star key={i} className="w-4 h-4 fill-yellow-400/50 text-yellow-400" />
-      );
-    } else {
-      stars.push(
-        <Icons.star key={i} className="w-4 h-4 text-gray-300" />
-      );
-    }
-  }
+//   for (let i = 0; i < 5; i++) {
+//     if (i < fullStars) {
+//       stars.push(
+//         <Icons.star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+//       );
+//     } else if (i === fullStars && hasHalfStar) {
+//       stars.push(
+//         <Icons.star key={i} className="w-4 h-4 fill-yellow-400/50 text-yellow-400" />
+//       );
+//     } else {
+//       stars.push(
+//         <Icons.star key={i} className="w-4 h-4 text-gray-300" />
+//       );
+//     }
+//   }
   
-  return (
-    <div className="flex items-center gap-1">
-      <div className="flex items-center">
-        {stars}
-      </div>
-      {totalReviews > 0 && (
-        <span className="text-body-sm text-text-200 ml-1">
-          ({totalReviews})
-        </span>
-      )}
-    </div>
-  );
-};
+//   return (
+//     <div className="flex items-center gap-1">
+//       <div className="flex items-center">
+//         {stars}
+//       </div>
+//       {totalReviews > 0 && (
+//         <span className="text-body-sm text-text-200 ml-1">
+//           ({totalReviews})
+//         </span>
+//       )}
+//     </div>
+//   );
+// };
 
 export const TurfsManagement = () => {
   const navigate = useNavigate();
@@ -401,7 +443,7 @@ export const TurfsManagement = () => {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [mediaLoading, setMediaLoading] = useState<Set<string>>(new Set());
 
-  // Fetch turfs on component mount
+
   useEffect(() => {
     fetchTurfs();
   }, []);
@@ -433,7 +475,7 @@ export const TurfsManagement = () => {
   };
 
   const fetchAllTurfMedia = async (turfList: Turf[]) => {
-    // Fetch media for all turfs concurrently
+    
     const mediaPromises = turfList.map(async (turf) => {
       try {
         setMediaLoading(prev => new Set(prev).add(turf.id));
@@ -457,10 +499,9 @@ export const TurfsManagement = () => {
 
     const mediaResults = await Promise.allSettled(mediaPromises);
     
-    // Update turfs with their media
     setTurfs(prevTurfs => 
       prevTurfs.map(turf => {
-        const mediaResult = mediaResults.find((result, index) => 
+        const mediaResult = mediaResults.find((result) => 
           result.status === 'fulfilled' && result.value.turfId === turf.id
         );
         
@@ -479,7 +520,6 @@ export const TurfsManagement = () => {
     try {
       setUpdatingStatus(turfId);
 
-      // Optimistic update
       setTurfs((prev) =>
         prev.map((t) =>
           t.id === turfId
@@ -491,13 +531,11 @@ export const TurfsManagement = () => {
         ),
       );
 
-      // Make API call
       await apiService.updateTurfStatus(turfId, !turf.isActive);
 
     } catch (error) {
       console.error("Error updating turf status:", error);
 
-      // Revert optimistic update on error
       setTurfs((prev) =>
         prev.map((t) =>
           t.id === turfId
@@ -520,13 +558,13 @@ export const TurfsManagement = () => {
   };
 
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
+  // const formatDate = (dateString: string) => {
+  //   return new Date(dateString).toLocaleDateString('en-IN', {
+  //     day: 'numeric',
+  //     month: 'short',
+  //     year: 'numeric'
+  //   });
+  // };
 
   return (
     <Fragment>
@@ -599,7 +637,7 @@ export const TurfsManagement = () => {
                       <span
                         className={`text-label-sm rounded-full px-2 py-1 font-medium sm:px-3 ${
                           turf.isActive
-                            ? "bg-text-300 text-success border-success/20 border"
+                            ? "bg-text-300 text-success  border-success/20 border"
                             : "bg-text-300 text-error border-error/20 border"
                         }`}
                       >

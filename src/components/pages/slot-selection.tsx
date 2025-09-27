@@ -50,26 +50,73 @@ interface TurfAvailabilityResponse {
   data: {
     date: string;
     turfId: string;
+    turfInfo?: {
+      name: string;
+      bookingMode: string;
+      totalCapacity: number;
+      pricingType: string;
+      averageRating: number;
+      totalReviews: number;
+      socialLinks: any[];
+      primaryImageUrl: string;
+    };
+    operatingHours: {
+      isOpen: boolean;
+      openTime: string;
+      closeTime: string;
+    };
     availableSlots: AvailableSlot[];
-    unavailablePeriods: any[];
-    pricingInfo: {
+    unavailablePeriods: {
+      startTime: string;
+      endTime: string;
+      reason: string;
+      description: string;
+      type: string;
+    }[];
+    pricingInfo?: {
       peakHours: string[];
       offPeakHours: string[];
     };
   };
 }
 
-interface BookingRequest {
-  turfId: string;
+interface OfflineBookingRequest {
+  bookingTypeId: number;
   bookingDate: string; 
   startTime: string;
   endTime: string;
-  bookingTypeId: number;
+  notes?: string;
+}
+
+interface OfflineBookingResponse {
+  success: boolean;
+  data: {
+    id: string;
+    turfId: string;
+    bookingTypeId: number;
+    bookingDate: string;
+    startTime: string;
+    endTime: string;
+    durationHours: number;
+    numberOfSlots: number;
+    status: string;
+    bookingSource: string;
+    isSharedSlot: boolean;
+    turfSegment: string;
+    paymentStatus: string;
+    totalTurfFee: number;
+    advanceAmount: number;
+    remainingAmount: number;
+    notes?: string;
+    createdBy: string;
+    createdAt: string;
+  };
+  message: string;
 }
 
 // API Service
 const apiService = {
-  baseURL: import.meta.env.VITE_BASE_API_URL || "play-arena-app-production.up.railway.app",
+  baseURL: import.meta.env.VITE_BASE_API_URL || "https://api.theplayarena.co.in",
 
   async getTurfDetails(turfId: string): Promise<TurfDetailsResponse> {
     try {
@@ -92,6 +139,7 @@ const apiService = {
     }
   },
 
+  
   async getTurfAvailability(turfId: string, date: string, bookingTypeId?: number): Promise<TurfAvailabilityResponse> {
     try {
       const params = new URLSearchParams({ date });
@@ -118,24 +166,51 @@ const apiService = {
     }
   },
 
-  async createBooking(request: BookingRequest): Promise<any> {
+  async createOfflineBooking(turfId: string, request: OfflineBookingRequest): Promise<OfflineBookingResponse> {
     try {
-      const response = await fetch(`${this.baseURL}/v1/bookings`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(request),
-      });
+      // Try different possible endpoint formats
+      const possibleEndpoints = [
+        `${this.baseURL}/v1/turfs/${turfId}/offline-booking`,
+        `${this.baseURL}/api/turfs/${turfId}/offline-booking`,
+        `${this.baseURL}/turfs/${turfId}/offline-booking`,
+        `${this.baseURL}/v1/dashboard/turfs/${turfId}/offline-booking`
+      ];
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      let response;
+      let lastError;
+
+      for (const endpoint of possibleEndpoints) {
+        try {
+          response = await fetch(endpoint, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(request),
+          });
+
+          if (response.ok) {
+            break; // Success, exit the loop
+          } else if (response.status !== 404) {
+            // If it's not a 404, this might be the correct endpoint but with another error
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+        } catch (error) {
+          lastError = error;
+          if (error instanceof Error && !error.message.includes('404')) {
+            throw error; // Re-throw non-404 errors immediately
+          }
+        }
+      }
+
+      if (!response || !response.ok) {
+        throw new Error(`All endpoints failed. Last error: ${lastError || 'Unknown error'}. Please check the API documentation for the correct endpoint.`);
       }
 
       return await response.json();
     } catch (error) {
-      console.error("Error creating booking:", error);
+      console.error("Error creating offline booking:", error);
       throw error;
     }
   }
@@ -153,7 +228,12 @@ const getNext7Days = () => {
     const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
     const dayDate = date.getDate().toString();
     const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-    const fullDate = date.toISOString().split('T')[0];
+    
+    // Fix timezone issue by using local date string format
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const fullDate = `${year}-${month}-${day}`;
     
     days.push({
       day: dayName,
@@ -164,6 +244,35 @@ const getNext7Days = () => {
   }
   
   return days;
+};
+
+// Add this component for closed turf message
+const TurfClosedMessage = ({ operatingHours, unavailablePeriods }: {
+  operatingHours: any;
+  unavailablePeriods: any[];
+}) => {
+  const closedPeriod = unavailablePeriods?.find(period => period.type === 'closed');
+  
+  return (
+    <div className="text-center py-12 px-4">
+      <Icons.clock className="w-16 h-16 text-text-300 mx-auto mb-4" />
+      <h3 className="text-h6 font-generalsans font-semibold text-text-100 mb-2">
+        Turf is Currently Closed
+      </h3>
+      <p className="text-body text-text-200 mb-4">
+        {closedPeriod?.description || 'This turf is not accepting bookings at the moment.'}
+      </p>
+      {!operatingHours?.isOpen && (
+        <div className="bg-background-200 rounded-xl p-4 max-w-sm mx-auto">
+          <p className="text-body-sm text-text-200">
+            Operating Hours: {operatingHours?.openTime === '00:00:00' && operatingHours?.closeTime === '00:00:00' 
+              ? 'Not Set' 
+              : `${operatingHours?.openTime} - ${operatingHours?.closeTime}`}
+          </p>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const getCurrentPeriod = (periods: typeof dayPeriods) => {
@@ -238,10 +347,17 @@ const AppHeaderWithBack = ({ onBack }: { onBack: () => void }) => (
             className="border-background-300"
           >
             <Icons.arrowLeft className="w-4 h-5 mr-1" />
-            
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+            <img 
+              src="/logo.svg" 
+              alt="Logo" 
+              className="w-8 h-8"
+            />
+            <Icons.home className="w-5 h-5 text-primary-200 fallback-icon hidden" />
+          </div>
           </Button>
         <span className="text-xl font-generalsans font-semibold text-text-100">
-          Book Slot
+          Mark Slot as Offline
         </span>
       </div>
     </div>
@@ -507,33 +623,49 @@ export const SlotSelection = () => {
   };
 
   const handleConfirmBooking = async () => {
-    if (!isBookingReady) return;
+    if (!isBookingReady || !turfId) return;
 
     try {
       setLoading(prev => ({ ...prev, booking: true }));
       setErrors(prev => ({ ...prev, booking: null }));
 
-      const bookingRequest: BookingRequest = {
-        turfId: bookingState.turfId,
-        bookingDate: bookingState.date,
+      // Ensure date is in correct format and log for debugging
+      console.log('Booking details:', {
+        selectedDate: bookingState.date,
         startTime: bookingState.startTime,
         endTime: bookingState.endTime,
+        bookingTypeId: bookingState.bookingTypeId
+      });
+
+      const bookingRequest: OfflineBookingRequest = {
         bookingTypeId: bookingState.bookingTypeId!,
+        bookingDate: bookingState.date, // This should be YYYY-MM-DD format
+        startTime: bookingState.startTime,
+        endTime: bookingState.endTime,
+        notes: "Walk-in customer booking", // Default note for offline booking
       };
 
-      const response = await apiService.createBooking(bookingRequest);
+      const response = await apiService.createOfflineBooking(turfId, bookingRequest);
       
       if (response.success) {
-        // Show success and navigate back
-        alert('Booking created successfully!');
+        // Show success message with booking details including the date
+        const selectedDateObj = new Date(bookingState.date + 'T00:00:00'); // Add time to avoid timezone issues
+        const formattedDate = selectedDateObj.toLocaleDateString('en-IN', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        
+        alert(`Offline booking created successfully!\n\nBooking ID: ${response.data.id}\nDate: ${formattedDate}\nTime: ${formatTime12Hour(response.data.startTime)} - ${formatTime12Hour(response.data.endTime)}\n\nSlot is now unavailable for online bookings.`);
         navigate(-1);
       } else {
-        throw new Error(response.message || 'Failed to create booking');
+        throw new Error(response.message || 'Failed to create offline booking');
       }
     } catch (error) {
       setErrors(prev => ({ 
         ...prev, 
-        booking: error instanceof Error ? error.message : 'Failed to create booking' 
+        booking: error instanceof Error ? error.message : 'Failed to create offline booking' 
       }));
     } finally {
       setLoading(prev => ({ ...prev, booking: false }));
@@ -619,69 +751,74 @@ export const SlotSelection = () => {
               </div>
 
               {/* Slots Grid */}
-              {loading.availability ? (
-                <Loader />
-              ) : errors.availability ? (
-                <ErrorMessage message={errors.availability} />
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {filteredSlots.length > 0 ? (
-                    filteredSlots.map((slot, index) => {
-                      const slotIsAvailable = isSlotAvailable(slot);
-                      return (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => slotIsAvailable && handleSlotClick(slot)}
-                          disabled={!slotIsAvailable}
-                          className={`p-1 rounded-xl border transition-all text-center ${
-                            !slotIsAvailable
-                              ? "border-background-300 bg-gray-100 text-gray-500 cursor-not-allowed"
-                              : bookingState.startTime === slot.startTime &&
-                                bookingState.endTime === slot.endTime &&
-                                bookingState.bookingTypeId
-                              ? "border-primary-200 bg-primary-200/10"
-                              : "border-background-300 bg-background-100 hover:border-primary-200/50"
-                          }`}
-                        >
-                          <div className="text-body-sm font-medium mb-1">
-                            {formatTime12Hour(slot.startTime)} – {formatTime12Hour(slot.endTime)}
-                          </div>
-                          <div className="text-body-sm text-text-200">
-                            {(() => {
-                              if (!slotIsAvailable) return "Not Available";
-                              
-                              if (
-                                bookingState.startTime === slot.startTime &&
-                                bookingState.endTime === slot.endTime &&
-                                bookingState.bookingTypeId
-                              ) {
-                                const selectedType = slot.bookingTypes.find(
-                                  (bt) => bt.id === bookingState.bookingTypeId
-                                );
-                                if (selectedType) {
-                                  return `${selectedType.displayName || selectedType.name} - ₹${selectedType.hourlyRate}/hr`;
-                                }
-                              }
+             {loading.availability ? (
+  <Loader />
+) : errors.availability ? (
+  <ErrorMessage message={errors.availability} />
+) : !availability?.operatingHours?.isOpen ? (
+  <TurfClosedMessage 
+    operatingHours={availability?.operatingHours}
+    unavailablePeriods={availability?.unavailablePeriods || []}
+  />
+) : (
+  <div className="grid grid-cols-2 gap-3">
+    {filteredSlots.length > 0 ? (
+      filteredSlots.map((slot, index) => {
+        const slotIsAvailable = isSlotAvailable(slot);
+        return (
+          <button
+            key={index}
+            type="button"
+            onClick={() => slotIsAvailable && handleSlotClick(slot)}
+            disabled={!slotIsAvailable}
+            className={`p-1 rounded-xl border transition-all text-center ${
+              !slotIsAvailable
+                ? "border-background-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                : bookingState.startTime === slot.startTime &&
+                  bookingState.endTime === slot.endTime &&
+                  bookingState.bookingTypeId
+                ? "border-primary-200 bg-primary-200/10"
+                : "border-background-300 bg-background-100 hover:border-primary-200/50"
+            }`}
+          >
+            <div className="text-body-sm font-medium mb-1">
+              {formatTime12Hour(slot.startTime)} – {formatTime12Hour(slot.endTime)}
+            </div>
+            <div className="text-body-sm text-text-200">
+              {(() => {
+                if (!slotIsAvailable) return "Not Available";
+                
+                if (
+                  bookingState.startTime === slot.startTime &&
+                  bookingState.endTime === slot.endTime &&
+                  bookingState.bookingTypeId
+                ) {
+                  const selectedType = slot.bookingTypes.find(
+                    (bt) => bt.id === bookingState.bookingTypeId
+                  );
+                  if (selectedType) {
+                    return `${selectedType.displayName || selectedType.name} - ₹${selectedType.hourlyRate}/hr`;
+                  }
+                }
 
-                              const rates = slot.bookingTypes?.map((b) => Number(b.hourlyRate)) ?? [];
-                              if (rates.length === 0) return "-";
-                              const minRate = Math.min(...rates);
-                              return `From ₹${minRate}/hr`;
-                            })()}
-                          </div>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="col-span-2 text-center py-8">
-                      <span className="text-text-200 text-body-sm">
-                        No slots available for the selected time period
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
+                const rates = slot.bookingTypes?.map((b) => Number(b.hourlyRate)) ?? [];
+                if (rates.length === 0) return "-";
+                const minRate = Math.min(...rates);
+                return `From ₹${minRate}/hr`;
+              })()}
+            </div>
+          </button>
+        );
+      })
+    ) : (
+      <div className="col-span-2 text-center py-8">
+        <span className="text-text-200 text-body-sm">
+          No slots available for the selected time period
+        </span>
+      </div>
+    )}
+  </div>
+)}
             </div>
 
             {/* Error Display */}
@@ -740,7 +877,7 @@ export const SlotSelection = () => {
             disabled={!isBookingReady || loading.price || loading.booking}
           >
             {(loading.price || loading.booking) && <Icons.loader className="size-4 animate-spin mr-2" />}
-            {isBookingReady ? "Confirm Booking" : "Select a Slot & Booking Type"}
+            {isBookingReady ? "Mark Slot as Offline" : "Select a Slot & Booking Type"}
           </Button>
         </div>
       </section>

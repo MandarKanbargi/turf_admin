@@ -17,6 +17,13 @@ import { Button } from "@/components/elements/button";
 
 type SignUp = z.infer<typeof signUpSchema>;
 
+// Define the error context type
+interface AuthErrorContext {
+  error?: {
+    message?: string;
+  };
+}
+
 export const CompleteSignup = () => {
   const navigate = useNavigate();
 
@@ -40,15 +47,21 @@ export const CompleteSignup = () => {
     setIsLoading(true);
 
     try {
-      await authClient.updateProfile(
-        { ...data, name: data.fullName },
+      // Assuming you need to use signUp method instead of updateProfile
+      // You may need to adjust this based on your actual auth client API
+      await authClient.signUp.email(
+        { 
+          email: data.email,
+          password: data.password,
+          name: data.fullName,
+        },
         {
           onSuccess: () => {
             toast.success("Account created successfully. Welcome aboard!");
             navigate("/");
             form.reset();
           },
-          onError: (ctx) => {
+          onError: (ctx: AuthErrorContext) => {
             toast.message("Oops!", {
               description:
                 ctx.error?.message ??
@@ -57,6 +70,11 @@ export const CompleteSignup = () => {
           },
         },
       );
+    } catch (error) {
+      // Handle any synchronous errors
+      toast.message("Oops!", {
+        description: "An error occurred. Please try again later.",
+      });
     } finally {
       setIsLoading(false);
     }
