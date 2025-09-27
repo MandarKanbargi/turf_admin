@@ -5,7 +5,6 @@ import { useNavigate, useParams } from "react-router";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/elements";
 
-
 interface Customer {
   name: string;
   phone: string;
@@ -30,7 +29,7 @@ interface Booking {
   bookingNotes?: string | null;
   createdAt: string;
   customer: Customer;
-  bookingType?: BookingType; // Make this optional
+  bookingType?: BookingType;
 }
 
 interface TurfInfo {
@@ -48,13 +47,11 @@ interface ApiResponse {
   message?: string;
 }
 
-
 const apiService = {
   baseURL: import.meta.env.VITE_BASE_API_URL || "play-arena-app-production.up.railway.app",
   
   async getTurfBookings(turfId: string): Promise<ApiResponse> {
     try {
-      
       const today = new Date();
       const dateFrom = today.toISOString().split('T')[0];
       
@@ -106,7 +103,6 @@ const apiService = {
     }
   }
 };
-
 
 const BookingsHeader = ({ turfInfo }: { turfInfo?: TurfInfo }) => {
   const navigate = useNavigate();
@@ -160,14 +156,6 @@ const BookingsHeader = ({ turfInfo }: { turfInfo?: TurfInfo }) => {
               )}
             </div>
           </div>
-{/* 
-          <Button
-            onClick={handleLogout}
-            className="bg-primary-200 text-background-100 flex w-auto items-center justify-center gap-2 font-medium"
-          >
-            <Icons.logOut className="size-4" />
-            Logout
-          </Button> */}
         </div>
       </div>
     </header>
@@ -214,7 +202,6 @@ const ErrorState = ({ message, onRetry }: { message: string; onRetry: () => void
   </div>
 );
 
-
 const EmptyState = () => (
   <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
     <Icons.calendar className="w-12 h-12 text-text-200 mb-4" />
@@ -237,6 +224,12 @@ const isUpcomingOrToday = (bookingDate: string) => {
   return booking >= today;
 };
 
+// Helper function to safely get nested values
+const safeGet = (obj: any, path: string, fallback: string = 'N/A') => {
+  return path.split('.').reduce((current, key) => {
+    return current && current[key] !== undefined && current[key] !== null ? current[key] : null;
+  }, obj) || fallback;
+};
 
 const BookingsManagement = () => {
   const navigate = useNavigate();
@@ -262,18 +255,30 @@ const BookingsManagement = () => {
       
       const response = await apiService.getTurfBookings(turfId);
       
+      // Debug: Log the API response
+      console.log("API Response:", response);
+      console.log("Bookings data:", response.data?.bookings);
+      
       if (response.success && response.data) {
-       
         const upcomingBookings = (response.data.bookings || []).filter(booking => 
           isUpcomingOrToday(booking.bookingDate)
         );
         
-      
+        // Debug: Log individual booking data
+        upcomingBookings.forEach((booking, index) => {
+          console.log(`Booking ${index}:`, {
+            id: booking.id,
+            customer: booking.customer,
+            totalTurfFee: booking.totalTurfFee,
+            remainingAmount: booking.remainingAmount,
+            bookingType: booking.bookingType
+          });
+        });
+        
         const sortedBookings = upcomingBookings.sort((a, b) => {
           const dateCompare = new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime();
           if (dateCompare !== 0) return dateCompare;
           
-     
           const timeA = new Date(`2000-01-01T${a.startTime}`).getTime();
           const timeB = new Date(`2000-01-01T${b.startTime}`).getTime();
           return timeA - timeB;
@@ -341,8 +346,6 @@ const BookingsManagement = () => {
     return booking.status === filter;
   });
 
- 
-
   return (
     <Fragment>
       <BookingsHeader turfInfo={turfInfo} />
@@ -352,7 +355,6 @@ const BookingsManagement = () => {
           {/* Header */}
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div className="grid ">
-             
               <p className="text-body-md text-h4 text-text-100 font-generalsans ">
                 View and manage upcoming bookings for this turf.
               </p>
@@ -364,9 +366,7 @@ const BookingsManagement = () => {
             <div className="grid gap-4 sm:grid-cols-4">
               <div className="bg-background-100 rounded-xl p-2">
                 <p className="text-body text-h8 text-text-200 font-generalsans">Upcoming Bookings : {bookings.length}</p>
-                {/* <p className="text-h5 font-generalsans font-semibold text-text-100"></p> */}
               </div>
-             
             </div>
           )}
 
@@ -387,23 +387,38 @@ const BookingsManagement = () => {
                   className="bg-background-100 shadow-down overflow-hidden rounded-xl"
                 >
                   <div className="p-4 sm:p-6">
-                    {/* Header */}
+                    {/* Header - Customer Info */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <h3 className="text-xl text-text-100 font-generalsans font-semibold mb-1">
-                          {booking.customer?.name || 'Unknown Customer'}
+                          {safeGet(booking, 'customer.name', 'Unknown Customer')}
                         </h3>
-                        <p className="text-body-md text-text-100">
-                          {booking.customer?.phone || 'No phone'}
-                        </p>
-                        <p className="text-body-md text-text-100">
-                          {booking.customer?.email || 'No email'}
-                        </p>
-                        {booking.bookingType && (
-                          <p className="text-body-md text-primary-200 font-medium mt-1">
-                            {booking.bookingType.name}
+                        <div className="space-y-1">
+                          <p className="text-body-md text-text-100 flex items-center gap-2">
+                            <Icons.phone className="w-4 h-4" />
+                            {safeGet(booking, 'customer.phone', 'No phone number')}
                           </p>
-                        )}
+                          <p className="text-body-md text-text-100 flex items-center gap-2">
+                            <Icons.mail className="w-4 h-4" />
+                            {safeGet(booking, 'customer.email', 'No email address')}
+                          </p>
+                          {booking.bookingType && (
+                            <p className="text-body-md text-primary-200 font-medium mt-1">
+                              {safeGet(booking, 'bookingType.name', '')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Status Badge */}
+                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        booking.status === 'confirmed' ? 'bg-success/10 text-success' :
+                        booking.status === 'pending' ? 'bg-warning/10 text-warning' :
+                        booking.status === 'cancelled' ? 'bg-error/10 text-error' :
+                        booking.status === 'completed' ? 'bg-primary-200/10 text-primary-200' :
+                        'bg-text-200/10 text-text-200'
+                      }`}>
+                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                       </div>
                     </div>
 
@@ -431,21 +446,52 @@ const BookingsManagement = () => {
                       </div>
                     </div>
 
-                    {/* Amount and Payment */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 p-3 bg-background-200 rounded-lg">
+                    {/* Amount and Payment Details */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-3 bg-background-200 rounded-lg">
                       <div>
                         <p className="text-body-sm text-text-200">Total Turf Fee</p>
                         <p className="text-h6 text-primary-200 font-generalsans font-semibold">
-                          ₹{booking.totalTurfFee?.toLocaleString() || 0}
+                          ₹{Number(booking.totalTurfFee || 0).toLocaleString('en-IN')}
                         </p>
                       </div>
                       <div>
                         <p className="text-body-sm text-text-200">Remaining Amount</p>
-                        <p className="text-h6 text-error font-generalsans font-semibold">
-                          ₹{booking.remainingAmount?.toLocaleString() || 0}
+                        <p className={`text-h6 font-generalsans font-semibold ${
+                          Number(booking.remainingAmount || 0) > 0 ? 'text-error' : 'text-success'
+                        }`}>
+                          ₹{Number(booking.remainingAmount || 0).toLocaleString('en-IN')}
                         </p>
                       </div>
+                      <div>
+                        <p className="text-body-sm text-text-200">Payment Status</p>
+                        <div className="flex flex-col gap-1">
+                          <p className={`text-sm font-medium ${booking.advancePaid ? 'text-success' : 'text-error'}`}>
+                            Advance: {booking.advancePaid ? 'Paid' : 'Pending'}
+                          </p>
+                          <p className={`text-sm font-medium ${booking.remainingPaid ? 'text-success' : 'text-error'}`}>
+                            Remaining: {booking.remainingPaid ? 'Paid' : 'Pending'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Special Requests & Notes */}
+                    {(booking.specialRequests || booking.bookingNotes) && (
+                      <div className="mb-4 p-3 bg-background-200 rounded-lg">
+                        {booking.specialRequests && (
+                          <div className="mb-2">
+                            <p className="text-body-sm text-text-200 mb-1">Special Requests</p>
+                            <p className="text-body text-text-100">{booking.specialRequests}</p>
+                          </div>
+                        )}
+                        {booking.bookingNotes && (
+                          <div>
+                            <p className="text-body-sm text-text-200 mb-1">Booking Notes</p>
+                            <p className="text-body text-text-100">{booking.bookingNotes}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Booking Metadata */}
                     <div className="mt-4 pt-4 border-t border-background-300">
