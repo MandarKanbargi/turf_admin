@@ -147,7 +147,7 @@ const BookingsHeader = ({ turfInfo }: { turfInfo?: TurfInfo }) => {
               onClick={() => navigate("/dashboard/turfs")}
               className="p-2 border-text-200/20 hover:bg-primary-200"
             >
-              <Icons.arrowLeft className="w-4 h-5" />
+            <Icons.arrowLeft className="w-4 h-5" />
             </Button>
             <div>
               <span className="text-sm font-generalsans font-semibold text-text-100">
