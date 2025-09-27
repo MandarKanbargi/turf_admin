@@ -29,7 +29,7 @@ interface Booking {
   specialRequests?: string | null;
   bookingNotes?: string | null;
   createdAt: string;
-  customer: Customer;
+  customer?: Customer; // Make this optional too
   bookingType?: BookingType; // Make this optional
 }
 
@@ -393,13 +393,17 @@ const BookingsManagement = () => {
                         <h3 className="text-xl text-text-100 font-generalsans font-semibold mb-1">
                           {booking.customer?.name || 'Unknown Customer'}
                         </h3>
-                        <p className="text-body-md text-text-100">
-                          {booking.customer?.phone || 'No phone'}
-                        </p>
-                        <p className="text-body-md text-text-100">
-                          {booking.customer?.email || 'No email'}
-                        </p>
-                        {booking.bookingType && (
+                        {booking.customer?.phone && (
+                          <p className="text-body-md text-text-100">
+                            {booking.customer.phone}
+                          </p>
+                        )}
+                        {booking.customer?.email && (
+                          <p className="text-body-md text-text-100">
+                            {booking.customer.email}
+                          </p>
+                        )}
+                        {booking.bookingType?.name && (
                           <p className="text-body-md text-primary-200 font-medium mt-1">
                             {booking.bookingType.name}
                           </p>
