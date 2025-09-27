@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { loginSchema } from "@/utils/form-schemas";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import {
   useForm,
   type SubmitHandler,
@@ -20,6 +20,7 @@ type Login = z.infer<typeof loginSchema>;
 
 export const Login = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const form = useForm<Login>({
     resolver: zodResolver(loginSchema),
@@ -47,7 +48,7 @@ export const Login = () => {
         {
           onSuccess: () => {
             toast.success("Logged in successfully.");
-            navigate("/");
+            navigate(searchParams.get("redirect") ?? "/");
             form.reset();
           },
           onError: (ctx) => {
