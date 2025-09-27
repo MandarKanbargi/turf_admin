@@ -224,11 +224,79 @@ const isUpcomingOrToday = (bookingDate: string) => {
   return booking >= today;
 };
 
-// Helper function to safely get nested values
-const safeGet = (obj: any, path: string, fallback: string = 'N/A') => {
-  return path.split('.').reduce((current, key) => {
-    return current && current[key] !== undefined && current[key] !== null ? current[key] : null;
-  }, obj) || fallback;
+// Helper function to safely get nested values with multiple possible paths
+const safeGet = (obj: any, paths: string[], fallback: string = 'N/A') => {
+  for (const path of paths) {
+    const value = path.split('.').reduce((current, key) => {
+      return current && current[key] !== undefined && current[key] !== null ? current[key] : null;
+    }, obj);
+    if (value !== null && value !== undefined && value !== '') {
+      return value;
+    }
+  }
+  return fallback;
+};
+
+// Helper function to get customer name from various possible structures
+const getCustomerName = (booking: any) => {
+  return safeGet(booking, [
+    'customer.name',
+    'Customer.name', 
+    'user.name',
+    'customerName',
+    'customer_name'
+  ], 'Unknown Customer');
+};
+
+// Helper function to get customer phone from various possible structures
+const getCustomerPhone = (booking: any) => {
+  return safeGet(booking, [
+    'customer.phone',
+    'Customer.phone',
+    'user.phone', 
+    'customerPhone',
+    'customer_phone',
+    'customer.phoneNumber',
+    'customer.mobile'
+  ], 'No phone number');
+};
+
+// Helper function to get customer email from various possible structures
+const getCustomerEmail = (booking: any) => {
+  return safeGet(booking, [
+    'customer.email',
+    'Customer.email',
+    'user.email',
+    'customerEmail', 
+    'customer_email'
+  ], 'No email address');
+};
+
+// Helper function to get total turf fee from various possible structures
+const getTotalTurfFee = (booking: any) => {
+  const fee = safeGet(booking, [
+    'totalTurfFee',
+    'total_turf_fee',
+    'amount',
+    'totalAmount',
+    'total_amount',
+    'fee',
+    'price'
+  ], '0');
+  return Number(fee) || 0;
+};
+
+// Helper function to get remaining amount from various possible structures
+const getRemainingAmount = (booking: any) => {
+  const remaining = safeGet(booking, [
+    'remainingAmount',
+    'remaining_amount', 
+    'pendingAmount',
+    'pending_amount',
+    'balanceAmount',
+    'balance_amount'
+  ], '0');
+  return Number(remaining) || 0;
 };
 
 const BookingsManagement = () => {
@@ -255,25 +323,32 @@ const BookingsManagement = () => {
       
       const response = await apiService.getTurfBookings(turfId);
       
-      // Debug: Log the API response
-      console.log("API Response:", response);
-      console.log("Bookings data:", response.data?.bookings);
+      // Debug: Log the complete API response structure
+      console.log("=== COMPLETE API RESPONSE ===");
+      console.log("Full Response:", JSON.stringify(response, null, 2));
+      console.log("Response.data:", JSON.stringify(response.data, null, 2));
+      console.log("Bookings array:", JSON.stringify(response.data?.bookings, null, 2));
       
       if (response.success && response.data) {
-        const upcomingBookings = (response.data.bookings || []).filter(booking => 
+        const allBookings = response.data.bookings || [];
+        console.log("=== ALL BOOKINGS DETAILED ===");
+        
+        // Log each booking with all its properties
+        allBookings.forEach((booking, index) => {
+          console.log(`\n--- Booking ${index} ---`);
+          console.log("Full booking object:", JSON.stringify(booking, null, 2));
+          console.log("Booking keys:", Object.keys(booking));
+          console.log("Customer object:", JSON.stringify(booking.customer || booking.Customer || booking.user, null, 2));
+          console.log("Total fee:", booking.totalTurfFee || booking.total_turf_fee || booking.amount || booking.totalAmount);
+          console.log("Remaining amount:", booking.remainingAmount || booking.remaining_amount || booking.pendingAmount);
+          console.log("Customer name:", booking.customer?.name || booking.Customer?.name || booking.user?.name || booking.customerName);
+          console.log("Customer phone:", booking.customer?.phone || booking.Customer?.phone || booking.user?.phone || booking.customerPhone);
+          console.log("Customer email:", booking.customer?.email || booking.Customer?.email || booking.user?.email || booking.customerEmail);
+        });
+        
+        const upcomingBookings = allBookings.filter(booking => 
           isUpcomingOrToday(booking.bookingDate)
         );
-        
-        // Debug: Log individual booking data
-        upcomingBookings.forEach((booking, index) => {
-          console.log(`Booking ${index}:`, {
-            id: booking.id,
-            customer: booking.customer,
-            totalTurfFee: booking.totalTurfFee,
-            remainingAmount: booking.remainingAmount,
-            bookingType: booking.bookingType
-          });
-        });
         
         const sortedBookings = upcomingBookings.sort((a, b) => {
           const dateCompare = new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime();
@@ -391,20 +466,20 @@ const BookingsManagement = () => {
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <h3 className="text-xl text-text-100 font-generalsans font-semibold mb-1">
-                          {safeGet(booking, 'customer.name', 'Unknown Customer')}
+                          {getCustomerName(booking)}
                         </h3>
                         <div className="space-y-1">
                           <p className="text-body-md text-text-100 flex items-center gap-2">
                             <Icons.phone className="w-4 h-4" />
-                            {safeGet(booking, 'customer.phone', 'No phone number')}
+                            {getCustomerPhone(booking)}
                           </p>
                           <p className="text-body-md text-text-100 flex items-center gap-2">
                             <Icons.mail className="w-4 h-4" />
-                            {safeGet(booking, 'customer.email', 'No email address')}
+                            {getCustomerEmail(booking)}
                           </p>
                           {booking.bookingType && (
                             <p className="text-body-md text-primary-200 font-medium mt-1">
-                              {safeGet(booking, 'bookingType.name', '')}
+                              {safeGet(booking, ['bookingType.name', 'booking_type.name', 'type'], '')}
                             </p>
                           )}
                         </div>
@@ -451,15 +526,15 @@ const BookingsManagement = () => {
                       <div>
                         <p className="text-body-sm text-text-200">Total Turf Fee</p>
                         <p className="text-h6 text-primary-200 font-generalsans font-semibold">
-                          ₹{Number(booking.totalTurfFee || 0).toLocaleString('en-IN')}
+                          ₹{getTotalTurfFee(booking).toLocaleString('en-IN')}
                         </p>
                       </div>
                       <div>
                         <p className="text-body-sm text-text-200">Remaining Amount</p>
                         <p className={`text-h6 font-generalsans font-semibold ${
-                          Number(booking.remainingAmount || 0) > 0 ? 'text-error' : 'text-success'
+                          getRemainingAmount(booking) > 0 ? 'text-error' : 'text-success'
                         }`}>
-                          ₹{Number(booking.remainingAmount || 0).toLocaleString('en-IN')}
+                          ₹{getRemainingAmount(booking).toLocaleString('en-IN')}
                         </p>
                       </div>
                       <div>
