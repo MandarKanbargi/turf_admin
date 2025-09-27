@@ -197,7 +197,7 @@ const AppHeaderWithLogout = () => {
       <div className="px-4 py-4 sm:px-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+            
               <Icons.home className="w-5 h-5 text-white fallback-icon hidden" />
             </div>
             <span className="text-2xl font-generalsans font-semibold text-text-100">
