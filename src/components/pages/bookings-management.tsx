@@ -143,9 +143,17 @@ const BookingsHeader = ({ turfInfo }: { turfInfo?: TurfInfo }) => {
               onClick={() => navigate("/dashboard/turfs")}
               className="p-2 border-text-200/20 hover:bg-primary-200"
             >
-            <Icons.arrowLeft className="w-4 h-5" />
+            <Icons.arrowLeft className="w-5 h-5" />
             </Button>
-            <div>
+            <div className="flex-1 flex justify-center pl-14">
+            <img 
+              src="/brand-mark.svg" 
+              alt="Brand Logo" 
+              className="h-8 w-auto"
+              
+            />
+          </div>
+            {/* <div>
               <span className="text-sm font-generalsans font-semibold text-text-100">
                 {turfInfo ? `${turfInfo.name} Bookings` : 'Bookings'}
               </span>
@@ -154,7 +162,8 @@ const BookingsHeader = ({ turfInfo }: { turfInfo?: TurfInfo }) => {
                   {turfInfo.city}
                 </p>
               )}
-            </div>
+            </div> */}
+            
           </div>
         </div>
       </div>
@@ -425,12 +434,22 @@ const BookingsManagement = () => {
     <Fragment>
       <BookingsHeader turfInfo={turfInfo} />
 
-      <section className="bg-background-200 min-h-screen py-4 sm:px-5 pt-23 sm:pt-36">
+      <section className="bg-background-200 min-h-screen py-4 sm:px-5 pt-20 sm:pt-36">
         <div className="space-y-4">
           {/* Header */}
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div className="grid ">
-              <p className="text-body-md text-h4 text-text-100 font-generalsans ">
+              <div>
+              <span className="text-2xl  font-generalsans font-semibold text-text-100"><u>
+                {turfInfo ? `${turfInfo.name} Bookings` : 'Bookings'}</u>
+              </span>
+              {turfInfo && (
+                <p className="text-body-lg text-text-200">
+                  {turfInfo.city}
+                </p>
+              )}
+            </div>
+              <p className="text-body-md text-h4 text-text-100 pt-3 font-generalsans ">
                 View and manage upcoming bookings for this turf.
               </p>
             </div>

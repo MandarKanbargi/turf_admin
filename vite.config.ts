@@ -13,6 +13,6 @@ export default defineConfig({
   },
   server: {
     cors: false, // disable Vite's built-in CORS setting
-    port: 3000,
+    port: 5173,
   },
 });

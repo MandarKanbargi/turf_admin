@@ -348,7 +348,7 @@ const AppHeaderWithBack = ({ onBack }: { onBack: () => void }) => (
           >
             <Icons.arrowLeft className="w-4 h-5 mr-1" />
         
-          </div>
+          
           </Button>
         <span className="text-xl font-generalsans font-semibold text-text-100">
           Mark Slot as Offline
