@@ -375,7 +375,8 @@ const BookingsManagement = () => {
     const bookingDate = new Date(booking.bookingDate);
     const matchesDate = isSameDate(bookingDate, selectedDate);
     const matchesFilter = filter === "all" || booking.status === filter;
-    return matchesDate && matchesFilter;
+    const isDisplayableStatus = booking.status === "confirmed" || booking.status === "cancelled";
+    return matchesDate && matchesFilter && isDisplayableStatus;
   });
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -398,7 +399,7 @@ const BookingsManagement = () => {
     <Fragment>
       <BookingsHeader turfInfo={turfInfo} />
 
-      <section className="bg-background-200 min-h-screen py-4 sm:px-5 pt-18 sm:pt-36">
+      <section className="bg-background-200 min-h-screen py-4 sm:px-5 pt-20 sm:pt-36">
         <div className="space-y-4">
           {/* Header */}
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -414,15 +415,15 @@ const BookingsManagement = () => {
                 )}
               </div>
               <p className="text-body-md text-h4 text-text-100 pt-3 font-generalsans">
-                View & manage bookings for this turf.
+                View and manage bookings for this turf.
               </p>
             </div>
           </div>
 
           {/* Date Picker Section */}
-          <div className="bg-background-100 shadow-down rounded-xl p-3 sm:p-6">
+          <div className="bg-background-100 shadow-down rounded-xl p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-              <div className="flex-1 w-30 sm:w-auto">
+              <div className="flex-1 w-full sm:w-auto">
                 <label className="block text-body-sm text-text-200 mb-2">
                   Select Date
                 </label>
@@ -456,9 +457,7 @@ const BookingsManagement = () => {
                     year: 'numeric' 
                   })}
                 </p>
-                {/* <p className="text-body-sm text-text-100 mt-1">
-                  {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''}
-                </p> */}
+             
               </div>
             </div>
           </div>
