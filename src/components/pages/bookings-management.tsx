@@ -223,54 +223,50 @@ const ErrorState = ({ message, onRetry }: { message: string; onRetry: () => void
   </div>
 );
 
-const EmptyState = () => (
-  <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
-    <Icons.calendar className="w-12 h-12 text-text-200 mb-4" />
-    <h3 className="text-h6 font-generalsans font-semibold text-text-100 mb-2">
-      No Upcoming Bookings
-    </h3>
-    <p className="text-body text-text-200 mb-4 max-w-md">
-      This turf doesn't have any upcoming bookings. New bookings will appear here once customers make reservations.
-    </p>
-  </div>
-);
-
-const isUpcomingOrToday = (bookingDate: string) => {
-  const today = new Date();
-  const booking = new Date(bookingDate);
-
-  today.setHours(0, 0, 0, 0);
-  booking.setHours(0, 0, 0, 0);
+const EmptyState = ({ selectedDate }: { selectedDate: Date }) => {
+  const isToday = selectedDate.toDateString() === new Date().toDateString();
   
-  return booking >= today;
+  return (
+    <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
+      <Icons.calendar className="w-12 h-12 text-text-200 mb-4" />
+      <h3 className="text-h6 font-generalsans font-semibold text-text-100 mb-2">
+        {isToday ? "No Bookings Today" : "No Bookings Found"}
+      </h3>
+      <p className="text-body text-text-200 mb-4 max-w-md">
+        {isToday 
+          ? "There are no bookings scheduled for today. New bookings will appear here once customers make reservations."
+          : `No bookings found for ${selectedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}.`
+        }
+      </p>
+    </div>
+  );
 };
 
+const isSameDate = (date1: Date, date2: Date) => {
+  return date1.getFullYear() === date2.getFullYear() &&
+         date1.getMonth() === date2.getMonth() &&
+         date1.getDate() === date2.getDate();
+};
 
 const calculateRemainingAmount = (booking: Booking): number => {
   const { totalTurfFee, advancePaid, remainingPaid } = booking;
   const PLATFORM_FEE = 100;
   
-  
   const actualTurfFee = totalTurfFee - PLATFORM_FEE;
   
- 
   if (advancePaid && remainingPaid) {
     return 0;
   }
   
-
   if (advancePaid && !remainingPaid) {
-   
     const advanceAmount = actualTurfFee * 0.5;
     return actualTurfFee - advanceAmount;
   }
-  
   
   if (!advancePaid && !remainingPaid) {
     return actualTurfFee; 
   }
   
-
   if (!advancePaid && remainingPaid) {
     const advanceAmount = actualTurfFee * 0.5;
     return advanceAmount; 
@@ -288,6 +284,7 @@ const BookingsManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   useEffect(() => {
     if (turfId) {
@@ -304,17 +301,10 @@ const BookingsManagement = () => {
       
       const response = await apiService.getTurfBookings(turfId);
       
-      console.log("=== API RESPONSE ===");
-      console.log("Full Response:", JSON.stringify(response, null, 2));
-      
       if (response.success && response.data) {
         const allBookings = response.data.bookings || [];
         
-        const upcomingBookings = allBookings.filter(booking => 
-          isUpcomingOrToday(booking.bookingDate)
-        );
-        
-        const sortedBookings = upcomingBookings.sort((a, b) => {
+        const sortedBookings = allBookings.sort((a, b) => {
           const dateCompare = new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime();
           if (dateCompare !== 0) return dateCompare;
           
@@ -382,36 +372,96 @@ const BookingsManagement = () => {
   };
 
   const filteredBookings = bookings.filter(booking => {
-    if (filter === "all") return true;
-    return booking.status === filter;
+    const bookingDate = new Date(booking.bookingDate);
+    const matchesDate = isSameDate(bookingDate, selectedDate);
+    const matchesFilter = filter === "all" || booking.status === filter;
+    return matchesDate && matchesFilter;
   });
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = new Date(e.target.value);
+    setSelectedDate(newDate);
+  };
+
+  const goToToday = () => {
+    setSelectedDate(new Date());
+  };
+
+  const formatDateForInput = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   return (
     <Fragment>
       <BookingsHeader turfInfo={turfInfo} />
 
-      <section className="bg-background-200 min-h-screen py-4 sm:px-5 pt-20 sm:pt-36">
+      <section className="bg-background-200 min-h-screen py-4 sm:px-5 pt-18 sm:pt-36">
         <div className="space-y-4">
           {/* Header */}
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="grid ">
+            <div className="grid">
               <div>
-              <span className="text-2xl  font-generalsans font-semibold text-text-100"><u>
-                {turfInfo ? `${turfInfo.name} Bookings` : 'Bookings'}</u>
-              </span>
-              {turfInfo && (
-                <p className="text-body-lg text-text-200">
-                  Booking Mode: {turfInfo.bookingMode}
-                </p>
-              )}
-            </div>
-              <p className="text-body-md text-h4 text-text-100 pt-3 font-generalsans ">
-                View and manage upcoming bookings for this turf.
+                <span className="text-2xl font-generalsans font-semibold text-text-100">
+                  <u>{turfInfo ? `${turfInfo.name} Bookings` : 'Bookings'}</u>
+                </span>
+                {turfInfo && (
+                  <p className="text-body-lg text-text-200">
+                    Booking Mode: {turfInfo.bookingMode}
+                  </p>
+                )}
+              </div>
+              <p className="text-body-md text-h4 text-text-100 pt-3 font-generalsans">
+                View & manage bookings for this turf.
               </p>
             </div>
           </div>
 
-          
+          {/* Date Picker Section */}
+          <div className="bg-background-100 shadow-down rounded-xl p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="flex-1 w-30 sm:w-auto">
+                <label className="block text-body-sm text-text-200 mb-2">
+                  Select Date
+                </label>
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    
+                    <input
+                      type="date"
+                      value={formatDateForInput(selectedDate)}
+                      onChange={handleDateChange}
+                      className="w-full pl-5 pr-4 py-2 bg-background-200 border border-text-200 rounded-lg text-text-100"
+                    />
+                  </div>
+                  <Button
+                    onClick={goToToday}
+                    variant="outline"
+                    className="whitespace-nowrap bg-primary-200 text-text-300 w-30"
+                  >
+                    Today
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-start sm:items-end">
+                <p className="text-body-sm text-text-200 mb-1">Viewing bookings for</p>
+                <p className="text-h6 font-generalsans font-semibold text-primary-200">
+                  {selectedDate.toLocaleDateString('en-IN', { 
+                    weekday: 'long',
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                  })}
+                </p>
+                {/* <p className="text-body-sm text-text-100 mt-1">
+                  {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''}
+                </p> */}
+              </div>
+            </div>
+          </div>
 
           {/* Content */}
           <div className="grid grid-cols-1 gap-4 sm:gap-6">
@@ -422,7 +472,7 @@ const BookingsManagement = () => {
             ) : error ? (
               <ErrorState message={error} onRetry={fetchBookings} />
             ) : filteredBookings.length === 0 ? (
-              <EmptyState />
+              <EmptyState selectedDate={selectedDate} />
             ) : (
               filteredBookings.map((booking) => {
                 const remainingAmount = calculateRemainingAmount(booking);
@@ -512,7 +562,6 @@ const BookingsManagement = () => {
                             ₹{(booking.totalTurfFee - 100).toLocaleString('en-IN')}
                           </p>
                         </div>
-                        
                       </div>
 
                       {/* Payment Status */}
@@ -525,10 +574,9 @@ const BookingsManagement = () => {
                             </p>
                             <p className={`text-sm font-medium ${booking.remainingPaid ? 'text-success' : 'text-error'}`}>
                               Remaining: {booking.remainingPaid ? 'Paid' : 'Pending'}
-                          </p>
+                            </p>
                           </div>
                         </div>
-                       
                       </div>
 
                       {/* Special Requests */}
