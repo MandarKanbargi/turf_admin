@@ -514,9 +514,9 @@ const BookingsManagement = () => {
                   {filteredBookings.length} {filteredBookings.length === 1 ? 'Booking' : 'Bookings'}
                 </p>
               </div>
-              <div className="bg-primary-200/10 p-3 rounded-full">
+              {/* <div className="bg-primary-200/10 p-3 rounded-full">
                 <Icons.calendar className="w-6 h-6 text-primary-200" />
-              </div>
+              </div> */}
             </div>
           </div>
 
