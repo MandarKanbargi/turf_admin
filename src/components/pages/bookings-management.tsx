@@ -436,7 +436,7 @@ const BookingsManagement = () => {
                       type="date"
                       value={formatDateForInput(selectedDate)}
                       onChange={handleDateChange}
-                      className="w-full pl-5 pr-4 py-2 bg-background-200 border border-text-200 rounded-lg text-text-100"
+                      className="w-full pl-5 pr-8 py-2 bg-background-200 border border-text-200 rounded-lg text-text-100"
                     />
                   </div>
                   <Button
