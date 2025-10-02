@@ -166,7 +166,7 @@ const AppHeaderWithLogout = () => {
             <Icons.home className="w-6 h-6 text-text-100" />
           </div>
 
-          <div className="flex-1 flex justify-center pl-8">
+          <div className="flex-1 flex justify-center pl-5">
             <img 
               src="/brand-mark.svg" 
               alt="Brand Logo" 

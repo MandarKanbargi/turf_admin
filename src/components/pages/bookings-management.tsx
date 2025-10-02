@@ -73,12 +73,12 @@ interface ApiResponse {
 const apiService = {
   baseURL: import.meta.env.VITE_BASE_API_URL || "play-arena-app-production.up.railway.app",
   
-  async getTurfBookings(turfId: string): Promise<ApiResponse> {
+  async getTurfBookings(turfId: string, dateFrom?: string): Promise<ApiResponse> {
     try {
-      const today = new Date();
-      const dateFrom = today.toISOString().split('T')[0];
+      // Use provided date or default to today
+      const date = dateFrom || new Date().toISOString().split('T')[0];
       
-      const response = await fetch(`${this.baseURL}/v1/turfs/${turfId}/bookings?date_from=${dateFrom}`, {
+      const response = await fetch(`${this.baseURL}/v1/turfs/${turfId}/bookings?date_from=${date}`, {
         method: "GET",
         credentials: "include",
         headers: {
@@ -290,7 +290,7 @@ const BookingsManagement = () => {
     if (turfId) {
       fetchBookings();
     }
-  }, [turfId]);
+  }, [turfId, selectedDate]); // Added selectedDate as dependency
 
   const fetchBookings = async () => {
     if (!turfId) return;
@@ -299,11 +299,14 @@ const BookingsManagement = () => {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.getTurfBookings(turfId);
+      // Format selected date for API call
+      const dateString = formatDateForInput(selectedDate);
+      const response = await apiService.getTurfBookings(turfId, dateString);
       
       if (response.success && response.data) {
         const allBookings = response.data.bookings || [];
         
+        // Sort bookings by date and time
         const sortedBookings = allBookings.sort((a, b) => {
           const dateCompare = new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime();
           if (dateCompare !== 0) return dateCompare;
@@ -421,6 +424,46 @@ const BookingsManagement = () => {
           </div>
 
           {/* Date Picker Section */}
+          {/* <div className="bg-background-100 shadow-down rounded-xl p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="flex-1 w-full sm:w-auto">
+                <label className="block text-body-sm text-text-200 mb-2">
+                  Select Date
+                </label>
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    <input
+                      type="date"
+                      value={formatDateForInput(selectedDate)}
+                      onChange={handleDateChange}
+                      className="w-full pl-5 pr-4 py-2 bg-background-200 border border-text-200 rounded-lg text-text-100"
+                    />
+                  </div>
+                  <Button
+                    onClick={goToToday}
+                    variant="outline"
+                    className="whitespace-nowrap bg-primary-200 text-text-300 w-30"
+                  >
+                    Today
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-start sm:items-end">
+                <p className="text-body-sm text-text-200 mb-1">Viewing bookings for</p>
+                <p className="text-h6 font-generalsans font-semibold text-primary-200">
+                  {selectedDate.toLocaleDateString('en-IN', { 
+                    weekday: 'long',
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                  })}
+                </p>
+              </div>
+            </div>
+          </div> */}
+
+          {/* Date Picker Section */}
           <div className="bg-background-100 shadow-down rounded-xl p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div className="flex-1 w-full sm:w-auto">
@@ -457,7 +500,22 @@ const BookingsManagement = () => {
                     year: 'numeric' 
                   })}
                 </p>
-             
+                
+              </div>
+              
+            </div>
+            
+          </div>
+          <div className="bg-background-100 shadow-down rounded-xl p-4 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-body-sm text-text-200 mb-1">Today's Bookings</p>
+                <p className="text-h4 font-generalsans font-semibold text-text-100">
+                  {filteredBookings.length} {filteredBookings.length === 1 ? 'Booking' : 'Bookings'}
+                </p>
+              </div>
+              <div className="bg-primary-200/10 p-3 rounded-full">
+                <Icons.calendar className="w-6 h-6 text-primary-200" />
               </div>
             </div>
           </div>

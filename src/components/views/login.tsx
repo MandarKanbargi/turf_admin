@@ -72,7 +72,7 @@ export const Login = () => {
 
   return (
     <Fragment>
-      <AppHeader
+     <AppHeader
         startAdornment={
           <Button
             size="icon"
@@ -81,6 +81,15 @@ export const Login = () => {
             onClick={() => navigate(-1)}
             children={<Icons.arrowLeft className="size-5" />}
           />
+        }
+        endAdornment={
+          <div className="flex-1 flex justify-center pl-1">
+            <img 
+              src="/brand-mark.svg" 
+              alt="Brand Logo" 
+              className="h-8 w-auto"
+            />
+          </div>
         }
       />
 
