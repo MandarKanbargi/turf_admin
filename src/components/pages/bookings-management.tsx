@@ -374,11 +374,11 @@ const BookingsManagement = () => {
     return diffHours;
   };
 
-  const filteredBookings = bookings.filter(booking => {
+   const filteredBookings = bookings.filter(booking => {
     const bookingDate = new Date(booking.bookingDate);
     const matchesDate = isSameDate(bookingDate, selectedDate);
     const matchesFilter = filter === "all" || booking.status === filter;
-    const isDisplayableStatus = booking.status === "confirmed" || booking.status === "cancelled";
+    const isDisplayableStatus = booking.status === "confirmed";
     return matchesDate && matchesFilter && isDisplayableStatus;
   });
 
