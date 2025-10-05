@@ -143,19 +143,19 @@ export const Login = () => {
             />
           </div>
 
-          <Link
+          {/* <Link
             to="/auth/forgot-password"
             className="text-label text-text-100 w-fit font-medium underline underline-offset-2"
           >
             Forgot Password?
-          </Link>
+          </Link> */}
 
           <Button type="submit" disabled={isLoading}>
             {isLoading ? "Please wait..." : "Log In"}
           </Button>
         </form>
 
-        <p className="text-body text-text-100 font-normal">
+        {/* <p className="text-body text-text-100 font-normal">
           Don't have an account?{" "}
           <Link
             to="/auth/enter-phone-number"
@@ -164,7 +164,7 @@ export const Login = () => {
             Register now
           </Link>
           !
-        </p>
+        </p> */}
       </section>
     </Fragment>
   );
