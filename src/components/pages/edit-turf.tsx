@@ -6,7 +6,6 @@ import { Icons } from "@/components/icons";
 import { Button } from "@/components/elements";
 import { Switch } from "@/components/elements";
 
-
 interface Media {
   id: string;
   type: string;
@@ -92,7 +91,7 @@ interface ApiResponse {
 }
 
 const turfApiService = {
-  baseURL: import.meta.env.VITE_BASE_API_URL || "play-arena-app-production.up.railway.app",
+  baseURL: import.meta.env.VITE_BASE_API_URL || "https://play-arena-app-production.up.railway.app",
 
   async getTurfById(turfId: string): Promise<ApiResponse> {
     try {
@@ -127,7 +126,6 @@ const turfApiService = {
 
   async updateTurf(turfId: string, turfData: Partial<Turf>): Promise<ApiResponse> {
     try {
-      
       const apiData: any = {};
 
       if (turfData.name !== undefined) apiData.name = turfData.name;
@@ -137,23 +135,22 @@ const turfApiService = {
       if (turfData.state !== undefined) apiData.state = turfData.state;
       if (turfData.postalCode !== undefined) apiData.postalCode = turfData.postalCode;
       if (turfData.contactPhone !== undefined) {
-        
         const cleanPhone = turfData.contactPhone.replace(/\D/g, '');
         if (cleanPhone.length === 10) {
-          apiData.contactPhone = `+91-${cleanPhone}`;
+          apiData.contactPhone = `+91${cleanPhone}`;
         } else {
-          apiData.contactPhone = turfData.contactPhone;  
+          apiData.contactPhone = turfData.contactPhone;
         }
       }
       if (turfData.contactEmail !== undefined) apiData.contactEmail = turfData.contactEmail;
-    
       if (turfData.maxConcurrentBookings !== undefined) apiData.maxConcurrentBookings = turfData.maxConcurrentBookings;
       if (turfData.bookingMode !== undefined) apiData.bookingMode = turfData.bookingMode;
-      
       if (turfData.isActive !== undefined) apiData.is_active = turfData.isActive;
 
-      // Add amenities to API data if provided
-      if (turfData.amenities !== undefined) apiData.amenities = turfData.amenities.map(a => a.id);
+      // Add amenities to API data if provided - send only IDs as array
+      if (turfData.amenities !== undefined) {
+        apiData.amenities = turfData.amenities.map(a => a.id);
+      }
 
       console.log("Updating turf with data:", apiData);
 
@@ -188,7 +185,6 @@ const turfApiService = {
     }
   },
 
-  // New method to fetch all available amenities
   async getAllAmenities(): Promise<{ success: boolean; data: Amenity[] }> {
     try {
       const response = await fetch(`${this.baseURL}/v1/amenities`, {
@@ -209,9 +205,78 @@ const turfApiService = {
       console.error("Error fetching amenities:", error);
       throw error;
     }
+  },
+
+  async addAmenitiesToTurf(turfId: string, amenityIds: number[]): Promise<ApiResponse> {
+    try {
+      console.log("Adding amenities to turf:", { turfId, amenityIds });
+
+      const response = await fetch(`${this.baseURL}/v1/turfs/${turfId}/amenities`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ amenityIds: amenityIds }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Authentication failed");
+        }
+        if (response.status === 403) {
+          throw new Error("Access forbidden");
+        }
+        if (response.status === 404) {
+          throw new Error("Turf not found");
+        }
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error adding amenities to turf:", error);
+      throw error;
+    }
+  },
+
+  async removeAmenitiesFromTurf(turfId: string, amenityIds: number[]): Promise<ApiResponse> {
+    try {
+      console.log("Removing amenities from turf:", { turfId, amenityIds });
+
+      const response = await fetch(`${this.baseURL}/v1/turfs/${turfId}/amenities`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ amenityIds: amenityIds }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Authentication failed");
+        }
+        if (response.status === 403) {
+          throw new Error("Access forbidden");
+        }
+        if (response.status === 404) {
+          throw new Error("Turf not found");
+        }
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error removing amenities from turf:", error);
+      throw error;
+    }
   }
 };
-
 
 const EditTurfHeader = ({ turfName, onBack }: { turfName: string; onBack: () => void }) => (
   <header className="fixed top-0 left-0 right-0 bg-background-100 shadow-sm border-b border-background-300 z-50">
@@ -225,7 +290,6 @@ const EditTurfHeader = ({ turfName, onBack }: { turfName: string; onBack: () => 
             className="border-background-300"
           >
             <Icons.arrowLeft className="w-4 h-5 mr-1" />
-            
           </Button>
           <div>
             <h1 className="text-xl font-generalsans font-semibold text-text-100">
@@ -240,7 +304,6 @@ const EditTurfHeader = ({ turfName, onBack }: { turfName: string; onBack: () => 
     </div>
   </header>
 );
-
 
 const Toast = ({ 
   message, 
@@ -270,7 +333,6 @@ const Toast = ({
   </div>
 );
 
-
 const LoadingSkeleton = () => (
   <div className="animate-pulse space-y-6">
     <div className="space-y-4">
@@ -292,7 +354,6 @@ const LoadingSkeleton = () => (
     </div>
   </div>
 );
-
 
 const FormField = ({ 
   label, 
@@ -319,7 +380,6 @@ const FormField = ({
   </div>
 );
 
-
 const Input = ({ 
   className = "", 
   error = false,
@@ -334,7 +394,6 @@ const Input = ({
     {...props}
   />
 );
-
 
 const Textarea = ({ 
   className = "", 
@@ -351,22 +410,18 @@ const Textarea = ({
   />
 );
 
-
 const formatPhoneForDisplay = (phone: string): string => {
   if (!phone) return "";
-  
-  const cleanPhone = phone.replace(/^\+91-?/, '').replace(/\D/g, '');
+  const cleanPhone = phone.replace(/^\+91/, '').replace(/\D/g, '');
   if (cleanPhone.length === 10) {
     return cleanPhone.replace(/(\d{5})(\d{5})/, '$1 $2');
   }
   return phone;
 };
 
-
 export const EditTurf = () => {
   const navigate = useNavigate();
   const { turfId } = useParams<{ turfId: string }>();
-  
   
   const [turf, setTurf] = useState<Turf | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -375,9 +430,9 @@ export const EditTurf = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  // New state for amenities
   const [allAmenities, setAllAmenities] = useState<Amenity[]>([]);
   const [selectedAmenities, setSelectedAmenities] = useState<Amenity[]>([]);
+  const [initialAmenityIds, setInitialAmenityIds] = useState<number[]>([]);
   const [isLoadingAmenities, setIsLoadingAmenities] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -387,16 +442,13 @@ export const EditTurf = () => {
     city: "",
     state: "",
     postalCode: "",
-    
     contactPhone: "",
     contactEmail: "",
-    
     maxConcurrentBookings: "",
     bookingMode: "",
     isActive: true,
   });
 
- 
   useEffect(() => {
     if (turfId) {
       fetchTurf();
@@ -417,7 +469,6 @@ export const EditTurf = () => {
         const turfData = response.data;
         setTurf(turfData);
         
-        
         setFormData({
           name: turfData.name || "",
           description: turfData.description || "",
@@ -425,17 +476,15 @@ export const EditTurf = () => {
           city: turfData.city || "",
           state: turfData.state || "",
           postalCode: turfData.postalCode || "",
-          
           contactPhone: formatPhoneForDisplay(turfData.contactPhone || ""),
           contactEmail: turfData.contactEmail || "",
-          
           maxConcurrentBookings: turfData.maxConcurrentBookings?.toString() || "",
           bookingMode: turfData.bookingMode || "",
           isActive: turfData.isActive !== undefined ? turfData.isActive : true,
         });
 
-        // Set selected amenities
         setSelectedAmenities(turfData.amenities || []);
+        setInitialAmenityIds((turfData.amenities || []).map(a => a.id));
       } else {
         throw new Error(response.message || "Failed to fetch turf data");
       }
@@ -460,20 +509,17 @@ export const EditTurf = () => {
       }
     } catch (err) {
       console.error("Error fetching amenities:", err);
-      // Don't show error for amenities fetch failure, just log it
     } finally {
       setIsLoadingAmenities(false);
     }
   };
 
- 
   const handleInputChange = (field: string, value: string | boolean | number) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
     
-  
     if (formErrors[field]) {
       setFormErrors(prev => ({
         ...prev,
@@ -482,7 +528,6 @@ export const EditTurf = () => {
     }
   };
 
-  // Handle amenity selection/deselection
   const handleAmenityToggle = (amenity: Amenity) => {
     setSelectedAmenities(prev => {
       const isSelected = prev.some(a => a.id === amenity.id);
@@ -494,7 +539,6 @@ export const EditTurf = () => {
     });
   };
 
- 
   const validateForm = () => {
     const errors: Record<string, string> = {};
 
@@ -526,7 +570,6 @@ export const EditTurf = () => {
     return Object.keys(errors).length === 0;
   };
 
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -548,40 +591,66 @@ export const EditTurf = () => {
         city: formData.city,
         state: formData.state,
         postalCode: formData.postalCode,
-        
         contactPhone: formData.contactPhone,
         contactEmail: formData.contactEmail,
-        
         maxConcurrentBookings: formData.maxConcurrentBookings ? Number(formData.maxConcurrentBookings) : undefined,
         bookingMode: formData.bookingMode,
         isActive: formData.isActive,
-        amenities: selectedAmenities, // Include selected amenities
       };
 
-      
       Object.keys(updateData).forEach(key => {
         if (updateData[key as keyof typeof updateData] === undefined || updateData[key as keyof typeof updateData] === '') {
           delete updateData[key as keyof typeof updateData];
         }
       });
 
+      // Update basic turf data first
       const response = await turfApiService.updateTurf(turfId, updateData);
 
-      if (response.success) {
-        setToast({ message: "Turf updated successfully!", type: "success" });
-        
-        
-        if (response.data) {
-          setTurf(response.data);
-        }
-        
-        
-        setTimeout(() => {
-          navigate("/dashboard/turfs");
-        }, 1500);
-      } else {
+      if (!response.success) {
         throw new Error(response.message || "Failed to update turf");
       }
+
+      // Check if amenities have changed
+      const currentAmenityIds = selectedAmenities.map(a => a.id);
+      const initialSorted = [...initialAmenityIds];
+      
+      console.log("Comparing amenities:", {
+        current: currentAmenityIds,
+        initial: initialSorted,
+        selectedAmenities: selectedAmenities
+      });
+
+      // Calculate which amenities to add and remove
+      const amenitiesToAdd = currentAmenityIds.filter(id => !initialSorted.includes(id));
+      const amenitiesToRemove = initialSorted.filter(id => !currentAmenityIds.includes(id));
+
+      console.log("Amenity changes:", {
+        toAdd: amenitiesToAdd,
+        toRemove: amenitiesToRemove
+      });
+
+      // Remove amenities that were deselected
+      if (amenitiesToRemove.length > 0) {
+        console.log("Removing amenities:", amenitiesToRemove);
+        await turfApiService.removeAmenitiesFromTurf(turfId, amenitiesToRemove);
+      }
+
+      // Add amenities that were selected
+      if (amenitiesToAdd.length > 0) {
+        console.log("Adding amenities:", amenitiesToAdd);
+        await turfApiService.addAmenitiesToTurf(turfId, amenitiesToAdd);
+      }
+
+      setToast({ message: "Turf updated successfully!", type: "success" });
+      
+      // Refresh turf data to get updated info
+      await fetchTurf();
+      
+      setTimeout(() => {
+        navigate("/dashboard/turfs");
+      }, 1500);
+
     } catch (err) {
       console.error("Error updating turf:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to update turf";
@@ -596,12 +665,10 @@ export const EditTurf = () => {
     }
   };
 
- 
   const handleBack = () => {
     navigate("/dashboard/turfs");
   };
 
-  
   const closeToast = () => {
     setToast(null);
   };
@@ -648,7 +715,6 @@ export const EditTurf = () => {
     <Fragment>
       <EditTurfHeader turfName={formData.name} onBack={handleBack} />
       
-      {/* Toast notification */}
       {toast && (
         <Toast 
           message={toast.message} 
@@ -661,7 +727,6 @@ export const EditTurf = () => {
         <div className="max-w-4xl mx-auto">
           <div className="bg-background-100 rounded-xl shadow-down p-4">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Error Alert */}
               {error && (
                 <div className="bg-error/10 border border-error/20 rounded-lg p-4 flex items-start gap-3">
                   <Icons.alertCircle className="w-5 h-5 text-error mt-0.5" />
@@ -672,7 +737,6 @@ export const EditTurf = () => {
                 </div>
               )}
 
-              {/* Basic Information */}
               <div className="space-y-4">
                 <h3 className="text-xl font-generalsans font-semibold text-text-100">
                   Basic Information
@@ -701,7 +765,6 @@ export const EditTurf = () => {
                 </FormField>
               </div>
 
-              {/* Location Information */}
               <div className="space-y-4">
                 <h3 className="text-h6 font-generalsans font-semibold text-text-100">
                   Location Information
@@ -751,19 +814,17 @@ export const EditTurf = () => {
                 </div>
               </div>
 
-              {/* Contact Information */}
               <div className="space-y-4">
                 <h3 className="text-h6 font-generalsans font-semibold text-text-100">
                   Contact Information
                 </h3>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField label="Manager Contact " id="contactPhone" error={formErrors.contactPhone}>
+                  <FormField label="Manager Contact" id="contactPhone" error={formErrors.contactPhone}>
                     <Input
                       id="contactPhone" 
                       value={formData.contactPhone}
                       onChange={(e) => {
-                        
                         const value = e.target.value.replace(/\D/g, '');
                         if (value.length <= 10) {
                           const formatted = value.length > 5 ? 
@@ -773,7 +834,7 @@ export const EditTurf = () => {
                         }
                       }}
                       placeholder="XXXXXXXXXX"
-                      maxLength={11}  
+                      maxLength={11}
                       error={!!formErrors.contactPhone}
                     />
                   </FormField>
@@ -791,7 +852,6 @@ export const EditTurf = () => {
                 </div>
               </div>
 
-              {/* Editable Amenities Section */}
               <div className="space-y-4">
                 <h3 className="text-h6 font-generalsans font-semibold text-text-100">
                   Amenities
@@ -815,16 +875,16 @@ export const EditTurf = () => {
                             key={amenity.id} 
                             className={`flex items-center gap-3 p-2 rounded-lg border-2 cursor-pointer transition-all ${
                               isSelected 
-                                ? 'bg-primary-200/10 text-primary-200' 
+                                ? 'bg-primary-200/10 border-primary-200' 
                                 : 'bg-background-200 border-background-300 hover:border-background-400'
                             }`}
                             onClick={() => handleAmenityToggle(amenity)}
                           >
                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                              isSelected ? ' text-white' : 'bg-background-300'
+                              isSelected ? 'bg-primary-200 text-text-300' : 'bg-background-300'
                             }`}>
                               {isSelected ? (
-                                <Icons.check className="w-6 h-5" />
+                                <Icons.check className="w-5 h-5" />
                               ) : (
                                 <Icons.plus className="w-4 h-4" />
                               )}
@@ -848,7 +908,6 @@ export const EditTurf = () => {
                 )}
               </div>
 
-              {/* Additional Information Display (Read-only) */}
               <div className="space-y-4">
                 <h3 className="text-h6 font-generalsans font-semibold text-text-100">
                   Additional Information
@@ -895,15 +954,14 @@ export const EditTurf = () => {
                   </div>
                 </div>
 
-                {/* Selected Amenities Preview */}
                 {selectedAmenities.length > 0 && (
                   <div>
                     <h4 className="font-medium text-text-100 mb-3">Selected Amenities ({selectedAmenities.length})</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-3">
                       {selectedAmenities.map((amenity) => (
                         <div key={amenity.id} className="flex items-center gap-2 p-2 bg-primary-100/10 border border-primary-100/20 rounded-lg">
-                          <div className="w-8 h-8  rounded-lg flex items-center justify-center">
-                            <Icons.check className="w-6 h-5 text-white" />
+                          <div className="w-8 h-8 bg-primary-200 rounded-lg flex items-center justify-center">
+                            <Icons.check className="w-5 h-5 text-text-300" />
                           </div>
                           <div className="flex-1">
                             <div className="font-medium text-text-100">{amenity.name}</div>
@@ -924,14 +982,13 @@ export const EditTurf = () => {
                   </div>
                 )}
 
-                {/* Booking Types Display */}
                 {turf?.bookingTypes && turf.bookingTypes.length > 0 && (
                   <div>
                     <h4 className="font-medium text-text-100 mb-3">Available Booking Types</h4>
                     <div className="space-y-3">
                       {turf.bookingTypes.map((bookingType) => (
                         <div key={bookingType.id} className="p-4 bg-background-200 rounded-lg">
-                          <div className="grid gap-1 justify-between items-start mb-2">
+                          <div className="flex justify-between items-start mb-2">
                             <h5 className="font-medium text-text-100">{bookingType.displayName}</h5>
                             <span className="text-primary-200 font-semibold">₹{bookingType.baseHourlyRate}/hour</span>
                           </div>
@@ -962,7 +1019,6 @@ export const EditTurf = () => {
                 )}
               </div>
 
-              {/* Status */}
               <div className="space-y-4">
                 <h3 className="text-h6 font-generalsans font-semibold text-text-100">
                   Status
@@ -990,7 +1046,6 @@ export const EditTurf = () => {
                 </div>
               </div>
 
-              {/* Form Actions */}
               <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-background-300">
                 <Button
                   type="button"
